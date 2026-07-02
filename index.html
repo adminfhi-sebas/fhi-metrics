@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FHI — Department KPI Metrics</title>
+<style>
+  :root {
+    --navy:   #1B3A5C;
+    --gold:   #C9922B;
+    --bg:     #F7F9FC;
+    --white:  #FFFFFF;
+    --border: #D0DBE8;
+    --pass:   #1B7C3A;  --pass-bg:#E8F5ED;
+    --warn:   #B45309;  --warn-bg:#FEF3CD;
+    --fail:   #991B1B;  --fail-bg:#FEE2E2;
+    --none:   #64748B;  --none-bg:#F1F5F9;
+    --text:   #1E293B;
+    --muted:  #64748B;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.5; }
+
+  /* HEADER */
+  .top-header { background: var(--navy); color: white; padding: 0 32px; display: flex; align-items: center; justify-content: space-between; height: 60px; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,.25); }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .brand-dot { width: 8px; height: 32px; background: var(--gold); border-radius: 4px; }
+  .brand h1 { font-size: 15px; font-weight: 700; letter-spacing: .4px; }
+  .brand .sub { font-size: 10px; opacity: .6; letter-spacing: .8px; text-transform: uppercase; }
+  .header-right { display: flex; align-items: center; gap: 10px; }
+  .header-right label { font-size: 12px; color: rgba(255,255,255,.6); }
+  #period-input { background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.25); border-radius: 6px; padding: 5px 10px; font-size: 12px; color: white; cursor: pointer; }
+  #period-input::-webkit-calendar-picker-indicator { filter: invert(1) opacity(.6); }
+  .btn-print { background: var(--gold); color: white; border: none; border-radius: 6px; padding: 7px 16px; font-size: 12px; font-weight: 600; cursor: pointer; transition: opacity .15s; }
+  .btn-print:hover { opacity: .88; }
+
+  /* LAYOUT */
+  .layout { display: flex; min-height: calc(100vh - 60px); }
+
+  /* SIDEBAR */
+  .sidebar { width: 220px; flex-shrink: 0; background: var(--navy); padding: 20px 0; position: sticky; top: 60px; height: calc(100vh - 60px); overflow-y: auto; }
+  .sidebar-label { font-size: 10px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: rgba(255,255,255,.4); padding: 0 20px 8px; }
+  .sidebar-sep { border-top: 1px solid rgba(255,255,255,.1); margin: 12px 0; }
+  .nav-item { display: flex; align-items: center; gap: 10px; padding: 8px 20px; cursor: pointer; color: rgba(255,255,255,.6); font-size: 12.5px; font-weight: 500; border-left: 3px solid transparent; transition: all .15s; text-decoration: none; }
+  .nav-item:hover { background: rgba(255,255,255,.07); color: white; }
+  .nav-item.active { color: var(--gold); border-left-color: var(--gold); background: rgba(201,146,43,.1); }
+  .nav-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); flex-shrink: 0; }
+  .nav-item.active .nav-dot { background: var(--gold); }
+  .nav-tag { margin-left: auto; font-size: 10px; background: rgba(255,255,255,.1); padding: 1px 7px; border-radius: 10px; color: rgba(255,255,255,.45); }
+
+  /* MAIN */
+  .main { flex: 1; padding: 28px 32px 60px; max-width: 1060px; }
+
+  /* SCORE HERO */
+  .score-hero { background: var(--white); border: 1px solid var(--border); border-radius: 12px; padding: 24px 28px; display: flex; align-items: center; gap: 36px; margin-bottom: 24px; }
+  .score-dial { position: relative; width: 100px; height: 100px; flex-shrink: 0; }
+  .score-dial svg { width: 100px; height: 100px; transform: rotate(-90deg); }
+  .score-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); text-align: center; }
+  .score-number { font-size: 24px; font-weight: 800; color: var(--navy); line-height: 1; }
+  .score-lbl { font-size: 9px; font-weight: 600; letter-spacing: .8px; color: var(--muted); text-transform: uppercase; }
+  .score-meta { flex: 1; }
+  .score-meta h2 { font-size: 18px; font-weight: 700; color: var(--navy); margin-bottom: 4px; }
+  .score-meta p { font-size: 12px; color: var(--muted); margin-bottom: 12px; }
+  .score-pills { display: flex; gap: 8px; flex-wrap: wrap; }
+  .pill { display: flex; align-items: center; gap: 5px; padding: 4px 11px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+  .pill.pass { background: var(--pass-bg); color: var(--pass); }
+  .pill.warn { background: var(--warn-bg); color: var(--warn); }
+  .pill.fail { background: var(--fail-bg); color: var(--fail); }
+  .pill.none { background: var(--none-bg); color: var(--none); }
+  .pill-count { font-size: 15px; font-weight: 800; }
+  .score-status { margin-left: auto; text-align: right; flex-shrink: 0; }
+  .status-badge { display: inline-block; padding: 6px 16px; border-radius: 8px; font-size: 12px; font-weight: 700; letter-spacing: .4px; margin-bottom: 4px; }
+  .score-date { font-size: 11px; color: var(--muted); }
+
+  /* ACTION BAR */
+  .action-bar { background: var(--navy); color: white; border-radius: 10px; padding: 16px 22px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
+  .action-bar h3 { font-size: 13px; font-weight: 700; }
+  .action-bar p { font-size: 11.5px; opacity: .7; margin-top: 2px; }
+  .action-btns { margin-left: auto; display: flex; gap: 8px; }
+  .btn-sec { background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.25); color: white; border-radius: 6px; padding: 6px 14px; font-size: 12px; font-weight: 600; cursor: pointer; }
+  .btn-sec:hover { background: rgba(255,255,255,.2); }
+  .btn-gold { background: var(--gold); border: none; color: white; border-radius: 6px; padding: 6px 14px; font-size: 12px; font-weight: 600; cursor: pointer; }
+  .btn-gold:hover { opacity: .88; }
+
+  /* SECTION CARD */
+  .section { background: var(--white); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 18px; overflow: hidden; scroll-margin-top: 80px; }
+  .section-header { display: flex; align-items: center; gap: 12px; padding: 14px 20px; border-bottom: 2px solid var(--border); background: #FAFCFF; cursor: pointer; user-select: none; }
+  .section-header:hover { background: #F4F7FB; }
+  .sec-icon { width: 32px; height: 32px; border-radius: 8px; background: var(--navy); color: var(--gold); display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; }
+  .sec-title { font-size: 14px; font-weight: 700; color: var(--navy); }
+  .sec-desc { font-size: 11px; color: var(--muted); margin-top: 1px; }
+  .sec-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+  .sec-prog { font-size: 11px; color: var(--muted); background: var(--bg); padding: 2px 8px; border-radius: 12px; border: 1px solid var(--border); }
+  .chevron { font-size: 11px; color: var(--muted); transition: transform .2s; }
+  .section.collapsed .chevron { transform: rotate(-90deg); }
+  .section.collapsed .sec-body { display: none; }
+
+  /* INPUT AREA inside section */
+  .input-area { padding: 16px 20px; border-bottom: 1px solid var(--border); background: #FAFCFF; }
+  .input-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; margin-bottom: 12px; }
+  .field { display: flex; flex-direction: column; gap: 3px; }
+  .field label { font-size: 11px; font-weight: 600; color: #4A6280; }
+  .field input { border: 1px solid var(--border); border-radius: 5px; padding: 6px 10px; font-size: 13px; color: var(--text); background: var(--white); width: 100%; transition: border-color .15s; }
+  .field input:focus { outline: none; border-color: var(--navy); }
+  .field .hint { font-size: 10px; color: var(--muted); }
+  .input-actions { display: flex; align-items: center; gap: 10px; }
+  .btn-calc { background: var(--navy); color: white; border: none; border-radius: 5px; padding: 7px 18px; font-size: 12px; font-weight: 600; cursor: pointer; transition: opacity .15s; }
+  .btn-calc:hover { opacity: .88; }
+  .save-msg { font-size: 11px; color: var(--pass); font-weight: 500; }
+
+  /* KPI RESULT ROWS */
+  .col-headers { display: grid; grid-template-columns: 1fr 120px 100px 120px; gap: 0; padding: 8px 20px 6px; background: #F4F7FB; border-bottom: 1px solid var(--border); }
+  .col-h { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); }
+  .kpi-row { display: grid; grid-template-columns: 1fr 120px 100px 120px; align-items: center; border-bottom: 1px solid var(--border); padding: 11px 20px; gap: 0; transition: background .1s; border-left: 3px solid transparent; }
+  .kpi-row:last-child { border-bottom: none; }
+  .kpi-row:hover { background: #FAFCFF; }
+  .kpi-row.st-pass { border-left-color: var(--pass); }
+  .kpi-row.st-warn { border-left-color: var(--warn); }
+  .kpi-row.st-fail { border-left-color: var(--fail); }
+  .kpi-name { font-size: 12.5px; font-weight: 600; color: var(--text); padding-right: 14px; line-height: 1.3; }
+  .kpi-def { font-size: 10.5px; color: var(--muted); margin-top: 2px; font-weight: 400; }
+  .kpi-target-col { font-size: 12px; font-weight: 700; color: var(--navy); padding-right: 10px; }
+  .kpi-val { font-size: 18px; font-weight: 800; padding-right: 10px; }
+  .kpi-val.st-pass { color: var(--pass); }
+  .kpi-val.st-warn { color: var(--warn); }
+  .kpi-val.st-fail { color: var(--fail); }
+  .kpi-val.st-none { color: var(--muted); }
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 700; }
+  .badge.pass { background: var(--pass-bg); color: var(--pass); }
+  .badge.warn { background: var(--warn-bg); color: var(--warn); }
+  .badge.fail { background: var(--fail-bg); color: var(--fail); }
+  .badge.none { background: var(--none-bg); color: var(--none); }
+
+  /* CHART inside section */
+  .chart-area { padding: 16px 20px 20px; border-top: 1px solid var(--border); }
+  .chart-area h4 { font-size: 12px; font-weight: 700; color: var(--navy); margin-bottom: 10px; letter-spacing: .3px; }
+  .chart-legend { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; }
+  .leg-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--muted); }
+  .leg-sq { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+  .chart-wrap { position: relative; width: 100%; }
+  .no-chart { text-align: center; padding: 24px; color: var(--muted); font-size: 12px; border: 1px dashed var(--border); border-radius: 6px; }
+
+  /* HISTORY SECTION */
+  .hist-section { background: var(--white); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 18px; padding: 20px; scroll-margin-top: 80px; }
+  .hist-section h3 { font-size: 14px; font-weight: 700; color: var(--navy); margin-bottom: 4px; }
+  .hist-section p { font-size: 12px; color: var(--muted); margin-bottom: 14px; }
+  .hist-controls { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+  .hist-controls label { font-size: 12px; color: var(--muted); font-weight: 500; }
+  .hist-controls select { border: 1px solid var(--border); border-radius: 5px; padding: 6px 12px; font-size: 12px; color: var(--text); background: var(--bg); }
+  .hist-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; }
+  .hist-card { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; }
+  .hist-card .hc-dept { font-size: 9px; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); font-weight: 700; margin-bottom: 2px; }
+  .hist-card .hc-name { font-size: 12px; font-weight: 600; color: var(--text); margin-bottom: 6px; line-height: 1.3; }
+  .hist-card .hc-val { font-size: 20px; font-weight: 800; }
+  .hist-card .hc-tgt { font-size: 10px; color: var(--muted); margin-top: 2px; }
+
+  /* NOTES */
+  .notes-section { background: var(--white); border: 1px solid var(--border); border-radius: 10px; padding: 20px; margin-bottom: 18px; }
+  .notes-section h3 { font-size: 14px; font-weight: 700; color: var(--navy); margin-bottom: 4px; }
+  .notes-section p { font-size: 12px; color: var(--muted); margin-bottom: 12px; }
+  #notes-ta { width: 100%; border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; font-size: 13px; font-family: inherit; color: var(--text); resize: vertical; min-height: 80px; background: var(--bg); }
+  #notes-ta:focus { outline: none; border-color: var(--gold); background: white; }
+
+  @media print {
+    .top-header, .sidebar, .btn-print, .action-btns { display: none !important; }
+    .layout { display: block; }
+    .main { padding: 0; max-width: 100%; }
+    .section { break-inside: avoid; }
+    .section.collapsed .sec-body { display: block !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="top-header">
+  <div class="brand">
+    <div class="brand-dot"></div>
+    <div>
+      <h1>FLORIDA HOMES INTERNATIONAL REALTY</h1>
+      <div class="sub">Department KPI Metrics Dashboard</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <label>Period</label>
+    <input type="month" id="period-input" title="Audit Period">
+    <button class="btn-print" onclick="window.print()">&#x2399; Print / Export PDF</button>
+  </div>
+</div>
+
+<div class="layout">
+
+<!-- SIDEBAR -->
+<nav class="sidebar">
+  <div class="sidebar-label">Leasing</div>
+  <a class="nav-item active" href="#sec-l1" onclick="setActive(this)"><span class="nav-dot"></span>Occupancy<span class="nav-tag">L1</span></a>
+  <a class="nav-item" href="#sec-l2" onclick="setActive(this)"><span class="nav-dot"></span>Leasing Activity<span class="nav-tag">L2</span></a>
+  <div class="sidebar-sep"></div>
+  <div class="sidebar-label">Management</div>
+  <a class="nav-item" href="#sec-m1" onclick="setActive(this)"><span class="nav-dot"></span>Rent &amp; Revenue<span class="nav-tag">M1</span></a>
+  <a class="nav-item" href="#sec-m2" onclick="setActive(this)"><span class="nav-dot"></span>Tenants &amp; Delinquency<span class="nav-tag">M2</span></a>
+  <a class="nav-item" href="#sec-m3" onclick="setActive(this)"><span class="nav-dot"></span>Work Orders<span class="nav-tag">M3</span></a>
+  <a class="nav-item" href="#sec-m4" onclick="setActive(this)"><span class="nav-dot"></span>Vendors &amp; Costs<span class="nav-tag">M4</span></a>
+  <div class="sidebar-sep"></div>
+  <div class="sidebar-label">Accounting</div>
+  <a class="nav-item" href="#sec-a1" onclick="setActive(this)"><span class="nav-dot"></span>Disbursements<span class="nav-tag">A1</span></a>
+  <a class="nav-item" href="#sec-a2" onclick="setActive(this)"><span class="nav-dot"></span>Accuracy &amp; Controls<span class="nav-tag">A2</span></a>
+  <div class="sidebar-sep"></div>
+  <a class="nav-item" href="#hist-section" onclick="setActive(this)"><span class="nav-dot"></span>History</a>
+  <a class="nav-item" href="#notes-section" onclick="setActive(this)"><span class="nav-dot"></span>Notes</a>
+</nav>
+
+<!-- MAIN -->
+<main class="main">
+
+  <!-- SCORE HERO -->
+  <div class="score-hero">
+    <div class="score-dial">
+      <svg viewBox="0 0 100 100">
+        <circle fill="none" stroke="#E2EAF3" stroke-width="10" cx="50" cy="50" r="40"/>
+        <circle fill="none" stroke="#1B7C3A" stroke-width="10" stroke-linecap="round"
+          cx="50" cy="50" r="40"
+          stroke-dasharray="251" stroke-dashoffset="251"
+          id="score-ring" style="transition:stroke-dashoffset .6s ease,stroke .4s"/>
+      </svg>
+      <div class="score-center">
+        <div class="score-number" id="score-num">&#8212;</div>
+        <div class="score-lbl">Score</div>
+      </div>
+    </div>
+    <div class="score-meta">
+      <h2>Portfolio Health Score</h2>
+      <p>Calculated from all KPIs with data entered. On target = 2 pts &nbsp;&middot;&nbsp; Watch = 1 pt &nbsp;&middot;&nbsp; Off target = 0 pts</p>
+      <div class="score-pills">
+        <div class="pill pass"><span class="pill-count" id="cnt-pass">0</span>&nbsp;On target</div>
+        <div class="pill warn"><span class="pill-count" id="cnt-warn">0</span>&nbsp;Watch</div>
+        <div class="pill fail"><span class="pill-count" id="cnt-fail">0</span>&nbsp;Off target</div>
+        <div class="pill none"><span class="pill-count" id="cnt-none">0</span>&nbsp;No data</div>
+      </div>
+    </div>
+    <div class="score-status">
+      <div class="status-badge" id="health-badge" style="background:var(--none-bg);color:var(--none)">NO DATA</div>
+      <div class="score-date" id="score-date"></div>
+    </div>
+  </div>
+
+  <!-- ACTION BAR -->
+  <div class="action-bar">
+    <div>
+      <h3>Period: <span id="period-display">&#8212;</span></h3>
+      <p>Enter raw numbers in each section. Click Calculate &amp; Save to compute KPIs, update the score, and save the period to history.</p>
+    </div>
+    <div class="action-btns">
+      <button class="btn-sec" onclick="calcAll()">&#x21BB; Recalculate All</button>
+      <button class="btn-sec" onclick="expandAll()">&#x229E; Expand All</button>
+      <button class="btn-gold" onclick="window.print()">&#x2399; Export PDF</button>
+    </div>
+  </div>
+
+  <!-- ═══ L1 — OCCUPANCY ════════════════════════════ -->
+  <div class="section" id="sec-l1">
+    <div class="section-header" onclick="toggleSec(this)">
+      <div class="sec-icon">&#x1F3E0;</div>
+      <div><div class="sec-title">L1 &mdash; Occupancy</div><div class="sec-desc">Leasing department &middot; Monthly</div></div>
+      <div class="sec-right"><span class="sec-prog" id="prog-l1">0/3</span><span class="chevron">&#9660;</span></div>
+    </div>
+    <div class="sec-body">
+      <div class="input-area">
+        <div class="input-grid">
+          <div class="field"><label>Occupied units</label><input type="number" id="l1-occ" min="0" placeholder="e.g. 95"><span class="hint">Count currently leased &amp; occupied</span></div>
+          <div class="field"><label>Total units</label><input type="number" id="l1-tot" min="0" placeholder="e.g. 100"><span class="hint">Total managed units</span></div>
+          <div class="field"><label>Vacant units</label><input type="number" id="l1-vac" min="0" placeholder="e.g. 5"><span class="hint">Currently empty and available</span></div>
+          <div class="field"><label>Rent collected ($)</label><input type="number" id="l1-rcoll" min="0" placeholder="e.g. 185000"><span class="hint">Actual rent received this period</span></div>
+          <div class="field"><label>Gross potential rent ($)</label><input type="number" id="l1-gpr" min="0" placeholder="e.g. 200000"><span class="hint">Market rent &times; all units</span></div>
+        </div>
+        <div class="input-actions">
+          <button class="btn-calc" onclick="calc('l1')">Calculate &amp; Save</button>
+          <span class="save-msg" id="msg-l1"></span>
+        </div>
+      </div>
+      <div class="col-headers"><div class="col-h">KPI</div><div class="col-h">Target</div><div class="col-h">Value</div><div class="col-h">Status</div></div>
+      <div id="rows-l1"></div>
+      <div class="chart-area">
+        <h4>6-Month Trend</h4>
+        <div class="chart-legend" id="leg-l1"></div>
+        <div class="chart-wrap" style="height:200px"><canvas id="ch-l1" role="img" aria-label="Occupancy 6-month trend">No data.</canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ L2 — LEASING ACTIVITY ═══════════════════════ -->
+  <div class="section" id="sec-l2">
+    <div class="section-header" onclick="toggleSec(this)">
+      <div class="sec-icon">&#x1F511;</div>
+      <div><div class="sec-title">L2 &mdash; Leasing Activity</div><div class="sec-desc">Leasing department &middot; Monthly</div></div>
+      <div class="sec-right"><span class="sec-prog" id="prog-l2">0/5</span><span class="chevron">&#9660;</span></div>
+    </div>
+    <div class="sec-body">
+      <div class="input-area">
+        <div class="input-grid">
+          <div class="field"><label>Sum of days listed</label><input type="number" id="l2-domsum" min="0" placeholder="e.g. 210"><span class="hint">Total days all leased units were listed</span></div>
+          <div class="field"><label>Units leased this period</label><input type="number" id="l2-leased" min="0" placeholder="e.g. 12"><span class="hint">Count of new leases signed</span></div>
+          <div class="field"><label>Applications approved</label><input type="number" id="l2-apprv" min="0" placeholder="e.g. 18"><span class="hint">Count</span></div>
+          <div class="field"><label>Leases signed</label><input type="number" id="l2-lsign" min="0" placeholder="e.g. 15"><span class="hint">Count</span></div>
+          <div class="field"><label>Vacant unit-days</label><input type="number" id="l2-vacdays" min="0" placeholder="e.g. 150"><span class="hint">Sum of days vacant across all vacant units</span></div>
+          <div class="field"><label>Avg market rent — vacant ($)</label><input type="number" id="l2-mrent" min="0" placeholder="e.g. 2200"><span class="hint">Per unit per month</span></div>
+          <div class="field"><label>Applications denied</label><input type="number" id="l2-deny" min="0" placeholder="e.g. 4"><span class="hint">Count</span></div>
+          <div class="field"><label>Applications total</label><input type="number" id="l2-atot" min="0" placeholder="e.g. 22"><span class="hint">Count</span></div>
+          <div class="field"><label>Active leasing agents</label><input type="number" id="l2-agents" min="0" placeholder="e.g. 3"><span class="hint">Count</span></div>
+          <div class="field"><label>Renewals signed</label><input type="number" id="l2-ren" min="0" placeholder="e.g. 8"><span class="hint">Count</span></div>
+          <div class="field"><label>Leases expiring this period</label><input type="number" id="l2-exp" min="0" placeholder="e.g. 11"><span class="hint">Count</span></div>
+          <div class="field"><label>Vacant units (count)</label><input type="number" id="l2-vac" min="0" placeholder="e.g. 5"><span class="hint">For revenue lost calc</span></div>
+        </div>
+        <div class="input-actions">
+          <button class="btn-calc" onclick="calc('l2')">Calculate &amp; Save</button>
+          <span class="save-msg" id="msg-l2"></span>
+        </div>
+      </div>
+      <div class="col-headers"><div class="col-h">KPI</div><div class="col-h">Target</div><div class="col-h">Value</div><div class="col-h">Status</div></div>
+      <div id="rows-l2"></div>
+      <div class="chart-area">
+        <h4>6-Month Trend</h4>
+        <div class="chart-legend" id="leg-l2"></div>
+        <div class="chart-wrap" style="height:200px"><canvas id="ch-l2" role="img" aria-label="Leasing activity 6-month trend">No data.</canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ M1 — RENT & REVENUE ═════════════════════════ -->
+  <div class="section" id="sec-m1">
+    <div class="section-header" onclick="toggleSec(this)">
+      <div class="sec-icon">&#x1F4B0;</div>
+      <div><div class="sec-title">M1 &mdash; Rent &amp; Revenue</div><div class="sec-desc">Management department &middot; Monthly</div></div>
+      <div class="sec-right"><span class="sec-prog" id="prog-m1">0/3</span><span class="chevron">&#9660;</span></div>
+    </div>
+    <div class="sec-body">
+      <div class="input-area">
+        <div class="input-grid">
+          <div class="field"><label>Rent billed ($)</label><input type="number" id="m1-rbill" min="0" placeholder="e.g. 200000"><span class="hint">Total rent due this period</span></div>
+          <div class="field"><label>Rent collected ($)</label><input type="number" id="m1-rcoll" min="0" placeholder="e.g. 197000"><span class="hint">Actual amount received</span></div>
+          <div class="field"><label>Occupied units</label><input type="number" id="m1-occ" min="0" placeholder="e.g. 95"><span class="hint">Count</span></div>
+        </div>
+        <div class="input-actions">
+          <button class="btn-calc" onclick="calc('m1')">Calculate &amp; Save</button>
+          <span class="save-msg" id="msg-m1"></span>
+        </div>
+      </div>
+      <div class="col-headers"><div class="col-h">KPI</div><div class="col-h">Target</div><div class="col-h">Value</div><div class="col-h">Status</div></div>
+      <div id="rows-m1"></div>
+      <div class="chart-area">
+        <h4>6-Month Trend</h4>
+        <div class="chart-legend" id="leg-m1"></div>
+        <div class="chart-wrap" style="height:200px"><canvas id="ch-m1" role="img" aria-label="Rent and revenue 6-month trend">No data.</canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ M2 — TENANTS & DELINQUENCY ══════════════════ -->
+  <div class="section" id="sec-m2">
+    <div class="section-header" onclick="toggleSec(this)">
+      <div class="sec-icon">&#x1F4CB;</div>
+      <div><div class="sec-title">M2 &mdash; Tenants &amp; Delinquency</div><div class="sec-desc">Management department &middot; Monthly / Quarterly</div></div>
+      <div class="sec-right"><span class="sec-prog" id="prog-m2">0/4</span><span class="chevron">&#9660;</span></div>
+    </div>
+    <div class="sec-body">
+      <div class="input-area">
+        <div class="input-grid">
+          <div class="field"><label>Total units</label><input type="number" id="m2-tot" min="0" placeholder="e.g. 100"><span class="hint">Count</span></div>
+          <div class="field"><label>Move-outs this period</label><input type="number" id="m2-mout" min="0" placeholder="e.g. 8"><span class="hint">Count</span></div>
+          <div class="field"><label>Survey scores (sum)</label><input type="number" id="m2-ssum" min="0" placeholder="e.g. 72"><span class="hint">Sum of all 1–10 ratings</span></div>
+          <div class="field"><label>Surveys received</label><input type="number" id="m2-sn" min="0" placeholder="e.g. 9"><span class="hint">Count</span></div>
+          <div class="field"><label>Late payments</label><input type="number" id="m2-late" min="0" placeholder="e.g. 4"><span class="hint">Paid after grace period</span></div>
+          <div class="field"><label>Returned payments (NSF)</label><input type="number" id="m2-nsf" min="0" placeholder="e.g. 1"><span class="hint">Count</span></div>
+          <div class="field"><label>Total payments received</label><input type="number" id="m2-pmts" min="0" placeholder="e.g. 98"><span class="hint">Count</span></div>
+        </div>
+        <div class="input-actions">
+          <button class="btn-calc" onclick="calc('m2')">Calculate &amp; Save</button>
+          <span class="save-msg" id="msg-m2"></span>
+        </div>
+      </div>
+      <div class="col-headers"><div class="col-h">KPI</div><div class="col-h">Target</div><div class="col-h">Value</div><div class="col-h">Status</div></div>
+      <div id="rows-m2"></div>
+      <div class="chart-area">
+        <h4>6-Month Trend</h4>
+        <div class="chart-legend" id="leg-m2"></div>
+        <div class="chart-wrap" style="height:200px"><canvas id="ch-m2" role="img" aria-label="Tenants and delinquency 6-month trend">No data.</canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ M3 — WORK ORDERS ═════════════════════════════ -->
+  <div class="section" id="sec-m3">
+    <div class="section-header" onclick="toggleSec(this)">
+      <div class="sec-icon">&#x1F527;</div>
+      <div><div class="sec-title">M3 &mdash; Work Orders</div><div class="sec-desc">Management department &middot; Weekly / Monthly</div></div>
+      <div class="sec-right"><span class="sec-prog" id="prog-m3">0/3</span><span class="chevron">&#9660;</span></div>
+    </div>
+    <div class="sec-body">
+      <div class="input-area">
+        <div class="input-grid">
+          <div class="field"><label>Work orders received</label><input type="number" id="m3-wotot" min="0" placeholder="e.g. 40"><span class="hint">Count this period</span></div>
+          <div class="field"><label>Work orders completed on time</label><input type="number" id="m3-woot" min="0" placeholder="e.g. 37"><span class="hint">Within target timeframe</span></div>
+          <div class="field"><label>Sum of days WOs were open</label><input type="number" id="m3-wodays" min="0" placeholder="e.g. 85"><span class="hint">For closed WOs only</span></div>
+          <div class="field"><label>Work orders closed</label><input type="number" id="m3-wocl" min="0" placeholder="e.g. 38"><span class="hint">Count</span></div>
+          <div class="field"><label>WOs past target date</label><input type="number" id="m3-wobkl" min="0" placeholder="e.g. 2"><span class="hint">Currently open &amp; overdue</span></div>
+        </div>
+        <div class="input-actions">
+          <button class="btn-calc" onclick="calc('m3')">Calculate &amp; Save</button>
+          <span class="save-msg" id="msg-m3"></span>
+        </div>
+      </div>
+      <div class="col-headers"><div class="col-h">KPI</div><div class="col-h">Target</div><div class="col-h">Value</div><div class="col-h">Status</div></div>
+      <div id="rows-m3"></div>
+      <div class="chart-area">
+        <h4>6-Month Trend</h4>
+        <div class="chart-legend" id="leg-m3"></div>
+        <div class="chart-wrap" style="height:200px"><canvas id="ch-m3" role="img" aria-label="Work orders 6-month trend">No data.</canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ M4 — VENDORS & COSTS ═════════════════════════ -->
+  <div class="section" id="sec-m4">
+    <div class="section-header" onclick="toggleSec(this)">
+      <div class="sec-icon">&#x1F6E0;</div>
+      <div><div class="sec-title">M4 &mdash; Vendors &amp; Make-Ready Costs</div><div class="sec-desc">Management department &middot; Monthly</div></div>
+      <div class="sec-right"><span class="sec-prog" id="prog-m4">0/2</span><span class="chevron">&#9660;</span></div>
+    </div>
+    <div class="sec-body">
+      <div class="input-area">
+        <div class="input-grid">
+          <div class="field"><label>Vendor jobs total</label><input type="number" id="m4-vtot" min="0" placeholder="e.g. 30"><span class="hint">Count this period</span></div>
+          <div class="field"><label>Vendor jobs completed on time</label><input type="number" id="m4-vot" min="0" placeholder="e.g. 27"><span class="hint">By promised date</span></div>
+          <div class="field"><label>Total make-ready cost ($)</label><input type="number" id="m4-mrcost" min="0" placeholder="e.g. 7500"><span class="hint">All turnover costs this period</span></div>
+          <div class="field"><label>Turnovers this period</label><input type="number" id="m4-turns" min="0" placeholder="e.g. 8"><span class="hint">Count</span></div>
+        </div>
+        <div class="input-actions">
+          <button class="btn-calc" onclick="calc('m4')">Calculate &amp; Save</button>
+          <span class="save-msg" id="msg-m4"></span>
+        </div>
+      </div>
+      <div class="col-headers"><div class="col-h">KPI</div><div class="col-h">Target</div><div class="col-h">Value</div><div class="col-h">Status</div></div>
+      <div id="rows-m4"></div>
+      <div class="chart-area">
+        <h4>6-Month Trend</h4>
+        <div class="chart-legend" id="leg-m4"></div>
+        <div class="chart-wrap" style="height:200px"><canvas id="ch-m4" role="img" aria-label="Vendors and costs 6-month trend">No data.</canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ A1 — DISBURSEMENTS ═══════════════════════════ -->
+  <div class="section" id="sec-a1">
+    <div class="section-header" onclick="toggleSec(this)">
+      <div class="sec-icon">&#x1F4B8;</div>
+      <div><div class="sec-title">A1 &mdash; Owner Disbursements</div><div class="sec-desc">Accounting department &middot; Monthly</div></div>
+      <div class="sec-right"><span class="sec-prog" id="prog-a1">0/2</span><span class="chevron">&#9660;</span></div>
+    </div>
+    <div class="sec-body">
+      <div class="input-area">
+        <div class="input-grid">
+          <div class="field"><label>Total disbursements</label><input type="number" id="a1-dtot" min="0" placeholder="e.g. 50"><span class="hint">Count this period</span></div>
+          <div class="field"><label>On-time disbursements</label><input type="number" id="a1-dot" min="0" placeholder="e.g. 50"><span class="hint">Sent by contracted date</span></div>
+          <div class="field"><label>Month-end close (days)</label><input type="number" id="a1-close" min="0" placeholder="e.g. 4"><span class="hint">Business days to close books</span></div>
+        </div>
+        <div class="input-actions">
+          <button class="btn-calc" onclick="calc('a1')">Calculate &amp; Save</button>
+          <span class="save-msg" id="msg-a1"></span>
+        </div>
+      </div>
+      <div class="col-headers"><div class="col-h">KPI</div><div class="col-h">Target</div><div class="col-h">Value</div><div class="col-h">Status</div></div>
+      <div id="rows-a1"></div>
+      <div class="chart-area">
+        <h4>6-Month Trend</h4>
+        <div class="chart-legend" id="leg-a1"></div>
+        <div class="chart-wrap" style="height:200px"><canvas id="ch-a1" role="img" aria-label="Disbursements 6-month trend">No data.</canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ A2 — ACCURACY & CONTROLS ════════════════════ -->
+  <div class="section" id="sec-a2">
+    <div class="section-header" onclick="toggleSec(this)">
+      <div class="sec-icon">&#x2705;</div>
+      <div><div class="sec-title">A2 &mdash; Accuracy &amp; Controls</div><div class="sec-desc">Accounting department &middot; Monthly</div></div>
+      <div class="sec-right"><span class="sec-prog" id="prog-a2">0/4</span><span class="chevron">&#9660;</span></div>
+    </div>
+    <div class="sec-body">
+      <div class="input-area">
+        <div class="input-grid">
+          <div class="field"><label>Statements issued</label><input type="number" id="a2-stot" min="0" placeholder="e.g. 50"><span class="hint">Count this period</span></div>
+          <div class="field"><label>Error-free statements</label><input type="number" id="a2-sef" min="0" placeholder="e.g. 49"><span class="hint">Zero-error count</span></div>
+          <div class="field"><label>Duplicate payments found</label><input type="number" id="a2-dup" min="0" placeholder="e.g. 0"><span class="hint">Count (target: 0)</span></div>
+          <div class="field"><label>Bank accounts total</label><input type="number" id="a2-bktot" min="0" placeholder="e.g. 12"><span class="hint">Count to reconcile</span></div>
+          <div class="field"><label>Accounts reconciled by day 10</label><input type="number" id="a2-bkrec" min="0" placeholder="e.g. 12"><span class="hint">Count</span></div>
+          <div class="field"><label>System escrow balance ($)</label><input type="number" id="a2-escsys" min="0" placeholder="e.g. 150000"><span class="hint">As reported in system</span></div>
+          <div class="field"><label>Actual bank balance ($)</label><input type="number" id="a2-escbnk" min="0" placeholder="e.g. 150000"><span class="hint">Confirmed bank statement</span></div>
+        </div>
+        <div class="input-actions">
+          <button class="btn-calc" onclick="calc('a2')">Calculate &amp; Save</button>
+          <span class="save-msg" id="msg-a2"></span>
+        </div>
+      </div>
+      <div class="col-headers"><div class="col-h">KPI</div><div class="col-h">Target</div><div class="col-h">Value</div><div class="col-h">Status</div></div>
+      <div id="rows-a2"></div>
+      <div class="chart-area">
+        <h4>6-Month Trend</h4>
+        <div class="chart-legend" id="leg-a2"></div>
+        <div class="chart-wrap" style="height:200px"><canvas id="ch-a2" role="img" aria-label="Accuracy and controls 6-month trend">No data.</canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- HISTORY -->
+  <div class="hist-section" id="hist-section">
+    <h3>&#x1F4CA; Historical KPI Reports</h3>
+    <p>Select a previously saved period to review all calculated KPIs for that month.</p>
+    <div class="hist-controls">
+      <label>Saved periods:</label>
+      <select id="hist-sel" onchange="loadHist()">
+        <option value="">&#8212; select a period &#8212;</option>
+      </select>
+    </div>
+    <div id="hist-detail"></div>
+  </div>
+
+  <!-- NOTES -->
+  <div class="notes-section" id="notes-section">
+    <h3>&#x1F4CB; Audit Notes &amp; Observations</h3>
+    <p>Use this space for summary findings, patterns, and recommended actions for this period.</p>
+    <textarea id="notes-ta" placeholder="Enter overall observations, patterns identified, and follow-up items here..."></textarea>
+  </div>
+
+</main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+// ── STORAGE ────────────────────────────────────────────────────
+const DB = {
+  set(k,v){ try{localStorage.setItem(k,JSON.stringify(v));return true;}catch(e){return false;} },
+  get(k){ try{const v=localStorage.getItem(k);return v?JSON.parse(v):null;}catch(e){return null;} },
+  keys(pfx){ const out=[];for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.startsWith(pfx))out.push(k);}return out.sort(); }
+};
+
+// ── HELPERS ────────────────────────────────────────────────────
+const g = id => parseFloat(document.getElementById(id)?.value)||0;
+const pct = (a,b) => b===0?null:Math.round(a/b*1000)/10;
+const rat = (a,b) => b===0?null:Math.round(a/b*10)/10;
+const fv = (v,u) => {
+  if(v===null||v===undefined) return '—';
+  if(u==='$') return '$'+Math.round(v).toLocaleString();
+  if(u==='%') return v.toFixed(1)+'%';
+  if(u==='d') return v.toFixed(1)+' d';
+  if(u==='/10') return v.toFixed(1)+'/10';
+  return Math.round(v).toString();
+};
+const fp = s => {
+  if(!s) return '—';
+  const [y,m]=s.split('-');
+  return ['January','February','March','April','May','June','July','August','September','October','November','December'][parseInt(m)-1]+' '+y;
+};
+
+// ── SECTION DEFINITIONS ────────────────────────────────────────
+const SECS = {
+  l1: {
+    inputs: ['l1-occ','l1-tot','l1-vac','l1-rcoll','l1-gpr'],
+    kpis: d => [
+      { name:'Occupancy rate',      def:'(Occupied ÷ Total) × 100',                  val:pct(d['l1-occ'],d['l1-tot']),       u:'%',  tgt:'≥ 95%',  st:v=>v===null?'none':v>=95?'pass':'fail' },
+      { name:'Vacancy rate',        def:'(Vacant ÷ Total) × 100',                    val:pct(d['l1-vac'],d['l1-tot']),       u:'%',  tgt:'≤ 5%',   st:v=>v===null?'none':v<=5?'pass':'fail' },
+      { name:'Economic occupancy',  def:'(Rent Collected ÷ Gross Potential) × 100',  val:pct(d['l1-rcoll'],d['l1-gpr']),     u:'%',  tgt:'≥ 93%',  st:v=>v===null?'none':v>=93?'pass':'fail' },
+    ],
+    trend: { labels:['Occupancy %','Vacancy %','Econ. occupancy %'], colors:['#2a78d6','#e34948','#1baf7a'], vals:d=>[pct(d['l1-occ'],d['l1-tot']),pct(d['l1-vac'],d['l1-tot']),pct(d['l1-rcoll'],d['l1-gpr'])] }
+  },
+  l2: {
+    inputs: ['l2-domsum','l2-leased','l2-apprv','l2-lsign','l2-vacdays','l2-mrent','l2-deny','l2-atot','l2-agents','l2-ren','l2-exp','l2-vac'],
+    kpis: d => {
+      const rl = d['l2-vac']&&d['l2-mrent']&&d['l2-vacdays'] ? Math.round(d['l2-vac']*d['l2-mrent']*d['l2-vacdays']/30) : 0;
+      return [
+        { name:'Days on market',        def:'Sum of days listed ÷ units leased',       val:rat(d['l2-domsum'],d['l2-leased']),  u:'d',  tgt:'≤ 21 d',  st:v=>v===null?'none':v<=21?'pass':'fail' },
+        { name:'App-to-lease rate',     def:'(Leases Signed ÷ Apps Approved) × 100',   val:pct(d['l2-lsign'],d['l2-apprv']),   u:'%',  tgt:'≥ 85%',   st:v=>v===null?'none':v>=85?'pass':'fail' },
+        { name:'Revenue lost to vacancy',def:'Vacant units × rent × days ÷ 30',        val:rl,                                  u:'$',  tgt:'Minimize', st:()=>'none' },
+        { name:'Application denial rate',def:'(Denied ÷ Total Applications) × 100',    val:pct(d['l2-deny'],d['l2-atot']),      u:'%',  tgt:'10–25%',   st:v=>v===null?'none':v>=10&&v<=25?'pass':'warn' },
+        { name:'Leases per agent',       def:'Leases Signed ÷ Active Agents',           val:rat(d['l2-lsign'],d['l2-agents']),   u:'',   tgt:'≥ 5',      st:v=>v===null?'none':v>=5?'pass':'fail' },
+        { name:'Lease renewal rate',     def:'(Renewals Signed ÷ Leases Expiring) × 100',val:pct(d['l2-ren'],d['l2-exp']),      u:'%',  tgt:'≥ 70%',   st:v=>v===null?'none':v>=70?'pass':'fail' },
+      ];
+    },
+    trend: { labels:['DOM (days)','App-to-lease %','Denial rate %','Renewal rate %'], colors:['#eda100','#2a78d6','#e34948','#1baf7a'], vals:d=>[rat(d['l2-domsum'],d['l2-leased']),pct(d['l2-lsign'],d['l2-apprv']),pct(d['l2-deny'],d['l2-atot']),pct(d['l2-ren'],d['l2-exp'])] }
+  },
+  m1: {
+    inputs: ['m1-rbill','m1-rcoll','m1-occ'],
+    kpis: d => [
+      { name:'Gross potential rent',  def:'Total rent billed',                          val:d['m1-rbill'],                       u:'$',  tgt:'Baseline', st:()=>'none' },
+      { name:'Net effective rent',    def:'Rent Collected ÷ Occupied Units',             val:rat(d['m1-rcoll'],d['m1-occ']),      u:'$',  tgt:'≥97% ask', st:()=>'none' },
+      { name:'Rent collection rate',  def:'(Rent Collected ÷ Rent Billed) × 100',       val:pct(d['m1-rcoll'],d['m1-rbill']),    u:'%',  tgt:'≥ 98%',    st:v=>v===null?'none':v>=98?'pass':'fail' },
+    ],
+    trend: { labels:['Collection rate %','Rent billed ($K)','Rent collected ($K)'], colors:['#2a78d6','#eda100','#1baf7a'], vals:d=>[pct(d['m1-rcoll'],d['m1-rbill']),d['m1-rbill']/1000,d['m1-rcoll']/1000] }
+  },
+  m2: {
+    inputs: ['m2-tot','m2-mout','m2-ssum','m2-sn','m2-late','m2-nsf','m2-pmts'],
+    kpis: d => [
+      { name:'Tenant turnover rate',  def:'(Move-Outs ÷ Total Units) × 100',           val:pct(d['m2-mout'],d['m2-tot']),       u:'%',  tgt:'≤ 30%/yr', st:v=>v===null?'none':v<=30?'pass':'fail' },
+      { name:'Tenant satisfaction',   def:'Average score on 1–10 survey scale',         val:rat(d['m2-ssum'],d['m2-sn']),        u:'/10',tgt:'≥ 8.0',     st:v=>v===null?'none':v>=8?'pass':v>=6?'warn':'fail' },
+      { name:'Late payment rate',     def:'(Late Payments ÷ Total Units) × 100',        val:pct(d['m2-late'],d['m2-tot']),       u:'%',  tgt:'≤ 5%',     st:v=>v===null?'none':v<=5?'pass':'fail' },
+      { name:'NSF / returned rate',   def:'(Returned Pmts ÷ Total Pmts) × 100',         val:pct(d['m2-nsf'],d['m2-pmts']),      u:'%',  tgt:'≤ 1%',     st:v=>v===null?'none':v<=1?'pass':'fail' },
+    ],
+    trend: { labels:['Turnover rate %','Satisfaction /10','Late pmt rate %','NSF rate %'], colors:['#e34948','#1baf7a','#eda100','#4a3aa7'], vals:d=>[pct(d['m2-mout'],d['m2-tot']),rat(d['m2-ssum'],d['m2-sn']),pct(d['m2-late'],d['m2-tot']),pct(d['m2-nsf'],d['m2-pmts'])] }
+  },
+  m3: {
+    inputs: ['m3-wotot','m3-woot','m3-wodays','m3-wocl','m3-wobkl'],
+    kpis: d => [
+      { name:'WO completion rate',    def:'(Completed on Time ÷ Total WOs) × 100',     val:pct(d['m3-woot'],d['m3-wotot']),    u:'%',  tgt:'≥ 90%',    st:v=>v===null?'none':v>=90?'pass':'fail' },
+      { name:'Avg WO cycle time',     def:'Sum of Days Open ÷ WOs Closed',              val:rat(d['m3-wodays'],d['m3-wocl']),    u:'d',  tgt:'≤ 3 days', st:v=>v===null?'none':v<=3?'pass':v<=5?'warn':'fail' },
+      { name:'Open WO backlog rate',  def:'(Overdue WOs ÷ Total WOs) × 100',            val:pct(d['m3-wobkl'],d['m3-wotot']),   u:'%',  tgt:'≤ 5%',     st:v=>v===null?'none':v<=5?'pass':'fail' },
+    ],
+    trend: { labels:['WO completion %','Avg cycle (days)','Backlog rate %'], colors:['#2a78d6','#eda100','#e34948'], vals:d=>[pct(d['m3-woot'],d['m3-wotot']),rat(d['m3-wodays'],d['m3-wocl']),pct(d['m3-wobkl'],d['m3-wotot'])] }
+  },
+  m4: {
+    inputs: ['m4-vtot','m4-vot','m4-mrcost','m4-turns'],
+    kpis: d => [
+      { name:'Vendor on-time rate',   def:'(Vendor Jobs on Time ÷ Total) × 100',        val:pct(d['m4-vot'],d['m4-vtot']),      u:'%',  tgt:'≥ 90%',    st:v=>v===null?'none':v>=90?'pass':'fail' },
+      { name:'Make-ready cost/turn',  def:'Total Make-Ready Cost ÷ Turnovers',           val:rat(d['m4-mrcost'],d['m4-turns']),   u:'$',  tgt:'≤ $1,000', st:v=>v===null?'none':v<=1000?'pass':'fail' },
+    ],
+    trend: { labels:['Vendor on-time %','Make-ready cost ($)'], colors:['#2a78d6','#eda100'], vals:d=>[pct(d['m4-vot'],d['m4-vtot']),rat(d['m4-mrcost'],d['m4-turns'])] }
+  },
+  a1: {
+    inputs: ['a1-dtot','a1-dot','a1-close'],
+    kpis: d => [
+      { name:'Disbursement on-time rate', def:'(On-Time ÷ Total Disbursements) × 100', val:pct(d['a1-dot'],d['a1-dtot']),      u:'%',  tgt:'100%',      st:v=>v===null?'none':v>=100?'pass':v>=95?'warn':'fail' },
+      { name:'Month-end close time',      def:'Business days from month-end to close',  val:d['a1-close']||0,                   u:'d',  tgt:'≤ 5 days',  st:v=>v<=5?'pass':v<=7?'warn':'fail' },
+    ],
+    trend: { labels:['Disbursement on-time %','Close time (days)'], colors:['#2a78d6','#eda100'], vals:d=>[pct(d['a1-dot'],d['a1-dtot']),d['a1-close']||0] }
+  },
+  a2: {
+    inputs: ['a2-stot','a2-sef','a2-dup','a2-bktot','a2-bkrec','a2-escsys','a2-escbnk'],
+    kpis: d => {
+      const var_ = Math.abs((d['a2-escsys']||0)-(d['a2-escbnk']||0));
+      return [
+        { name:'Statement accuracy rate',  def:'(Error-Free ÷ Total Statements) × 100',  val:pct(d['a2-sef'],d['a2-stot']),      u:'%',  tgt:'≥ 99%',          st:v=>v===null?'none':v>=99?'pass':'fail' },
+        { name:'Duplicate payments',       def:'Count of duplicate payments found',        val:d['a2-dup']||0,                     u:'',   tgt:'0',              st:v=>v===0?'pass':'fail' },
+        { name:'Reconciliation rate',      def:'(Reconciled ÷ Total Accounts) × 100',     val:pct(d['a2-bkrec'],d['a2-bktot']),   u:'%',  tgt:'100% by day 10', st:v=>v===null?'none':v>=100?'pass':'fail' },
+        { name:'Escrow balance variance',  def:'|System Balance − Bank Balance|',          val:var_,                               u:'$',  tgt:'$0 variance',    st:v=>v===0?'pass':v<100?'warn':'fail' },
+      ];
+    },
+    trend: { labels:['Statement accuracy %','Recon rate %','Escrow variance ($)'], colors:['#2a78d6','#1baf7a','#e34948'], vals:d=>[pct(d['a2-sef'],d['a2-stot']),pct(d['a2-bkrec'],d['a2-bktot']),Math.abs((d['a2-escsys']||0)-(d['a2-escbnk']||0))] }
+  }
+};
+
+// ── CHART INSTANCES ────────────────────────────────────────────
+const CHARTS = {};
+
+// ── RENDER KPI ROWS ────────────────────────────────────────────
+function renderRows(sid, data) {
+  const sec = SECS[sid];
+  const kpis = sec.kpis(data);
+  const el = document.getElementById('rows-'+sid);
+  const stColor = { pass:'var(--pass)', warn:'var(--warn)', fail:'var(--fail)', none:'var(--muted)' };
+  const stLabel = { pass:'On target', warn:'Watch', fail:'Off target', none:'—' };
+  el.innerHTML = kpis.map(k => {
+    const st = k.st(k.val);
+    return `<div class="kpi-row st-${st}">
+      <div><div class="kpi-name">${k.name}</div><div class="kpi-def">${k.def}</div></div>
+      <div class="kpi-target-col">${k.tgt}</div>
+      <div class="kpi-val st-${st}">${fv(k.val,k.u)}</div>
+      <div><span class="badge ${st}">${stLabel[st]}</span></div>
+    </div>`;
+  }).join('');
+  // update section progress
+  const total = kpis.length;
+  const done  = kpis.filter(k=>k.st(k.val)!=='none').length;
+  document.getElementById('prog-'+sid).textContent = done+'/'+total;
+}
+
+// ── BUILD TREND CHART ──────────────────────────────────────────
+function buildChart(sid) {
+  const tc = SECS[sid].trend;
+  const keys = DB.keys('kpi:'+sid+':').slice(-6);
+  const wrapEl = document.getElementById('ch-'+sid)?.parentElement;
+  if (!wrapEl) return;
+
+  if (keys.length === 0) {
+    wrapEl.innerHTML = '<div class="no-chart">Save at least one period to see the trend chart</div>';
+    document.getElementById('leg-'+sid).innerHTML = '';
+    return;
+  }
+
+  if (CHARTS[sid]) { CHARTS[sid].destroy(); delete CHARTS[sid]; }
+  if (!document.getElementById('ch-'+sid)) {
+    wrapEl.innerHTML = `<canvas id="ch-${sid}" role="img" aria-label="${sid} trend">No data.</canvas>`;
+  }
+
+  const labels = keys.map(k => fp(k.replace('kpi:'+sid+':','')));
+  const recs   = keys.map(k => DB.get(k) || {});
+  const datasets = tc.labels.map((lbl,i) => ({
+    label: lbl,
+    data: recs.map(r => tc.vals(r)[i] ?? null),
+    borderColor: tc.colors[i],
+    backgroundColor: tc.colors[i]+'18',
+    borderWidth: 2, pointRadius: 5, tension: 0.3, fill: false
+  }));
+
+  document.getElementById('leg-'+sid).innerHTML = tc.labels.map((l,i) =>
+    `<span class="leg-item"><span class="leg-sq" style="background:${tc.colors[i]}"></span>${l}</span>`
+  ).join('');
+
+  CHARTS[sid] = new Chart(document.getElementById('ch-'+sid), {
+    type: 'line',
+    data: { labels, datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: { legend: { display: false },
+        tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y !== null ? ctx.parsed.y : '—'}` } }
+      },
+      scales: {
+        x: { grid: { color: '#E8F0F8' }, ticks: { color: '#94A3B8', font: { size: 11 } }, border: { display: false } },
+        y: { grid: { color: '#E8F0F8' }, ticks: { color: '#94A3B8', font: { size: 11 } }, border: { display: false } }
+      }
+    }
+  });
+}
+
+// ── SCORE ──────────────────────────────────────────────────────
+function updateScore() {
+  let pass=0, warn=0, fail=0, none=0;
+  Object.keys(SECS).forEach(sid => {
+    const period = document.getElementById('period-input').value;
+    const saved = period ? DB.get('kpi:'+sid+':'+period) : null;
+    if (!saved) { none += SECS[sid].kpis({}).length; return; }
+    SECS[sid].kpis(saved).forEach(k => {
+      const st = k.st(k.val);
+      if (st==='pass') pass++;
+      else if (st==='warn') warn++;
+      else if (st==='fail') fail++;
+      else none++;
+    });
+  });
+
+  document.getElementById('cnt-pass').textContent = pass;
+  document.getElementById('cnt-warn').textContent = warn;
+  document.getElementById('cnt-fail').textContent = fail;
+  document.getElementById('cnt-none').textContent = none;
+
+  const reviewed = pass+warn+fail;
+  const pts = pass*2 + warn*1;
+  const maxPts = reviewed*2;
+  const pct = maxPts>0 ? Math.round(pts/maxPts*100) : null;
+
+  const ring  = document.getElementById('score-ring');
+  const numEl = document.getElementById('score-num');
+  const badge = document.getElementById('health-badge');
+  const circ  = 251;
+
+  if (pct===null) {
+    numEl.textContent='—'; ring.style.strokeDashoffset=circ;
+    badge.style.background='var(--none-bg)'; badge.style.color='var(--none)'; badge.textContent='NO DATA';
+    return;
+  }
+
+  numEl.textContent = pct+'%';
+  ring.style.strokeDashoffset = circ - (circ*pct/100);
+
+  let color,bg,label;
+  if (fail>0)       { color='var(--fail)';bg='var(--fail-bg)';label='CRITICAL ISSUES'; }
+  else if (pct>=90) { color='var(--pass)';bg='var(--pass-bg)';label='HEALTHY'; }
+  else if (pct>=70) { color='#1D6A8C';   bg='#E0F0F8';       label='NEEDS ATTENTION'; }
+  else if (pct>=50) { color='var(--warn)';bg='var(--warn-bg)';label='AT RISK'; }
+  else              { color='var(--fail)';bg='var(--fail-bg)';label='CRITICAL'; }
+
+  ring.style.stroke=color; numEl.style.color=color;
+  badge.style.background=bg; badge.style.color=color; badge.textContent=label;
+  document.getElementById('score-date').textContent='Updated: '+new Date().toLocaleString();
+}
+
+// ── CALC & SAVE ────────────────────────────────────────────────
+function calc(sid) {
+  const period = document.getElementById('period-input').value;
+  if (!period) { alert('Please select an audit period first.'); return; }
+  const sec = SECS[sid];
+  const data = {};
+  sec.inputs.forEach(id => { data[id] = g(id); });
+  data._period = period;
+  data._savedAt = new Date().toISOString();
+
+  DB.set('kpi:'+sid+':'+period, data);
+  renderRows(sid, data);
+  buildChart(sid);
+  updateScore();
+  refreshHistDropdown();
+
+  const m = document.getElementById('msg-'+sid);
+  m.textContent = 'Saved — '+fp(period);
+  setTimeout(()=>m.textContent='', 3000);
+}
+
+function calcAll() {
+  Object.keys(SECS).forEach(sid => calc(sid));
+}
+
+// ── FILL INPUTS FROM SAVED ─────────────────────────────────────
+function fillInputs(sid, data) {
+  SECS[sid].inputs.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = data[id] || '';
+  });
+}
+
+// ── HISTORY ────────────────────────────────────────────────────
+function refreshHistDropdown() {
+  const allKeys = new Set();
+  Object.keys(SECS).forEach(sid => {
+    DB.keys('kpi:'+sid+':').forEach(k => allKeys.add(k.replace('kpi:'+sid+':','')));
+  });
+  const periods = Array.from(allKeys).sort().reverse();
+  const sel = document.getElementById('hist-sel');
+  sel.innerHTML = '<option value="">— select a period —</option>' +
+    periods.map(p => `<option value="${p}">${fp(p)}</option>`).join('');
+}
+
+function loadHist() {
+  const period = document.getElementById('hist-sel').value;
+  const el = document.getElementById('hist-detail');
+  if (!period) { el.innerHTML=''; return; }
+
+  const stColor = { pass:'var(--pass)', warn:'var(--warn)', fail:'var(--fail)', none:'var(--muted)' };
+  let html = `<div style="font-size:12px;font-weight:600;color:var(--navy);margin-bottom:14px">${fp(period)}</div>`;
+
+  Object.keys(SECS).forEach(sid => {
+    const data = DB.get('kpi:'+sid+':'+period);
+    if (!data) return;
+    const kpis = SECS[sid].kpis(data);
+    html += `<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin:14px 0 8px">${sid.toUpperCase().replace(/(\d)/,' $1')}</div>`;
+    html += '<div class="hist-grid">';
+    kpis.forEach(k => {
+      const st = k.st(k.val);
+      html += `<div class="hist-card">
+        <div class="hc-name">${k.name}</div>
+        <div class="hc-val" style="color:${stColor[st]}">${fv(k.val,k.u)}</div>
+        <div class="hc-tgt">${k.tgt}</div>
+        <span class="badge ${st}" style="margin-top:6px;display:inline-block">${st==='pass'?'On target':st==='warn'?'Watch':st==='fail'?'Off target':'—'}</span>
+      </div>`;
+    });
+    html += '</div>';
+  });
+  el.innerHTML = html;
+}
+
+// ── UI ─────────────────────────────────────────────────────────
+function toggleSec(hdr) { hdr.closest('.section').classList.toggle('collapsed'); }
+function expandAll() { document.querySelectorAll('.section').forEach(s=>s.classList.remove('collapsed')); }
+function setActive(el) { document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active')); el.classList.add('active'); }
+
+// ── PERIOD ─────────────────────────────────────────────────────
+function initPeriod() {
+  const now = new Date();
+  const val = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  const inp = document.getElementById('period-input');
+  inp.value = val;
+  document.getElementById('period-display').textContent = fp(val);
+
+  inp.addEventListener('change', e => {
+    const p = e.target.value;
+    document.getElementById('period-display').textContent = fp(p);
+    Object.keys(SECS).forEach(sid => {
+      const saved = DB.get('kpi:'+sid+':'+p);
+      if (saved) { fillInputs(sid, saved); renderRows(sid, saved); }
+      else { SECS[sid].inputs.forEach(id=>{ const el=document.getElementById(id); if(el)el.value=''; }); document.getElementById('rows-'+sid).innerHTML=''; document.getElementById('prog-'+sid).textContent='0/'+SECS[sid].kpis({}).length; }
+    });
+    updateScore();
+  });
+}
+
+// ── INIT ───────────────────────────────────────────────────────
+(function init() {
+  initPeriod();
+  refreshHistDropdown();
+  const period = document.getElementById('period-input').value;
+  Object.keys(SECS).forEach(sid => {
+    buildChart(sid);
+    const saved = period ? DB.get('kpi:'+sid+':'+period) : null;
+    if (saved) { fillInputs(sid, saved); renderRows(sid, saved); }
+    else {
+      const total = SECS[sid].kpis({}).length;
+      document.getElementById('prog-'+sid).textContent = '0/'+total;
+    }
+  });
+  updateScore();
+})();
+</script>
+</body>
+</html>
